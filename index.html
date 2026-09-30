@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>技能沙盒 (SkillSandbox) - 2分钟工作流去魅</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --success: #10b981;
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text-main); min-height: 100vh; padding: 24px; }
+    .container { max-width: 800px; margin: 0 auto; }
+
+    header { text-align: center; margin-bottom: 24px; }
+    header h1 { font-size: 26px; margin-bottom: 8px; color: #fff; }
+    header p { color: var(--text-sub); font-size: 14px; }
+
+    /* 顶部导航切换卡 */
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; justify-content: center; }
+    .tab-btn {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      color: var(--text-sub); padding: 10px 18px; border-radius: 999px;
+      cursor: pointer; font-size: 14px; transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600;
+    }
+
+    /* 沙盒主体卡片 */
+    .sandbox-card {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 16px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    .section-title { font-size: 18px; margin-bottom: 6px; font-weight: 600; }
+    .section-desc { font-size: 13px; color: var(--text-sub); margin-bottom: 20px; }
+
+    /* 进度条指示器 */
+    .steps-indicator { display: flex; gap: 8px; margin-bottom: 20px; }
+    .step-dot {
+      flex: 1; height: 6px; border-radius: 4px; background: #334155; transition: background 0.3s;
+    }
+    .step-dot.done { background: var(--success); }
+
+    /* 模拟舞台预览区 */
+    .stage {
+      background: #090d16; border: 1px dashed #334155; border-radius: 12px;
+      min-height: 150px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; margin-bottom: 20px;
+      padding: 16px; text-align: center; font-size: 14px;
+    }
+    .stage-item {
+      background: #1e293b; border: 1px solid #475569; padding: 8px 14px;
+      border-radius: 8px; margin: 4px; display: inline-flex; align-items: center; gap: 8px;
+    }
+
+    /* 交互操作区 */
+    .action-panel { display: flex; flex-direction: column; gap: 12px; }
+    .action-btn {
+      background: var(--accent); color: white; border: none; padding: 12px 16px;
+      border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;
+      display: flex; justify-content: space-between; align-items: center;
+      transition: background 0.2s, opacity 0.2s;
+    }
+    .action-btn:hover { background: var(--accent-hover); }
+    .action-btn:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+
+    /* 通关弹窗 */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      display: none; align-items: center; justify-content: center; z-index: 50;
+    }
+    .modal {
+      background: var(--card-bg); border: 1px solid var(--accent);
+      border-radius: 16px; padding: 28px; max-width: 440px; width: 90%;
+      text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    }
+    .modal h3 { font-size: 20px; color: #fff; margin-bottom: 10px; }
+    .modal p { color: var(--text-sub); font-size: 14px; line-height: 1.6; margin-bottom: 18px; }
+    .reality-tip {
+      background: #0f172a; border-radius: 8px; padding: 12px;
+      font-size: 12px; text-align: left; color: #cbd5e1; margin-bottom: 20px;
+    }
+    .modal-btn {
+      background: var(--success); color: white; border: none; padding: 10px 20px;
+      border-radius: 8px; font-weight: 600; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>⚡ 现实技能微沙盒 (Workflow Sandbox)</h1>
+    <p>3 次极简交互，跑通一个专业领域的最底层闭环，打破对工具的恐惧。</p>
+  </header>
+
+  <!-- 关卡切换导航 -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchToy('video')">🎬 极简视频剪辑</button>
+    <button class="tab-btn" onclick="switchToy('website')">🌐 30秒上线卖货站</button>
+    <button class="tab-btn" onclick="switchToy('podcast')">🎙️ 发布第一期播客</button>
+  </div>
+
+  <!-- 沙盒展示卡片 -->
+  <div class="sandbox-card">
+    <div id="toy-header"></div>
+    <div class="steps-indicator" id="step-dots"></div>
+    <div class="stage" id="stage-preview"></div>
+    <div class="action-panel" id="action-panel"></div>
+  </div>
+</div>
+
+<!-- 通关弹窗 -->
+<div class="modal-overlay" id="finish-modal">
+  <div class="modal">
+    <div style="font-size: 44px; margin-bottom: 8px;">🎉</div>
+    <h3 id="modal-title">流程打通！</h3>
+    <p id="modal-desc"></p>
+    <div class="reality-tip" id="modal-tip"></div>
+    <button class="modal-btn" onclick="closeModal()">我记住了，去体验下一个</button>
+  </div>
+</div>
+
+<script>
+// 三个小沙盒的数据定义
+const TOYS = {
+  video: {
+    title: "极简剪辑核心流",
+    desc: "很多剪辑教程让人头疼。实际上剪辑的本质就这 4 步：导素材、切一刀、配音、导出。",
+    steps: [
+      { name: "导入视频素材", hint: "点击把一段原始录屏导入时间线", render: "📹 视频素材已就位 [00:00 - 05:00]" },
+      { name: "裁剪废话与多余片段", hint: "把中间不需要的 2 分钟切掉", render: "✂️ 剪辑完成：保留精彩片段 [01:00 - 03:00]" },
+      { name: "加入背景音乐 (BGM) & 淡入", hint: "添加音轨，并设置音量平滑渐入", render: "🎵 音轨已挂载 (淡入效果已开启)" },
+      { name: "一键导出视频", hint: "合成输出为 MP4 格式", render: "🚀 MP4 已生成！" }
+    ],
+    reality: "💡 现实映射：不管是用剪映、Premiere 还是 Final Cut，所有界面 80% 的区域都是在重复上面这个过程。AI 时代字幕和粗剪甚至可直接让 AI 一键代劳。"
+  },
+  website: {
+    title: "独立开发与单页站上线",
+    desc: "做网站不需要马上写上千行代码。核心只有：摆放内容、加收款按钮、绑定域名上线。",
+    steps: [
+      { name: "编辑产品大标题与介绍", hint: "写一句吸引人的标语", render: "📝 标题：AI 提示词宝典 ($9.9)" },
+      { name: "拖入微信/Stripe 收款组件", hint: "让访客可以直接付款", render: "💳 [立即购买 $9.9] 按钮已就绪" },
+      { name: "点击发布到全网", hint: "分配独立服务器与域名", render: "🌐 网站已上线：https://myshop.com" },
+      { name: "虚拟顾客下单测试", hint: "模拟第一个访客购买", render: "💰 收到新订单！账户余额 +$9.9" }
+    ],
+    reality: "💡 现实映射：现实中用 Notion + Super、Carrd 或者是 AI 建站工具（如 Framer、V0），整个过程就是把上面这 4 件事点选完成而已。"
+  },
+  podcast: {
+    title: "零门槛发布第一期播客",
+    desc: "别被昂贵的麦克风和复杂的声卡吓退，声音内容本质就是录制、降噪、套封面、推到流媒体。",
+    steps: [
+      { name: "导入手机录制的粗糙音频", hint: "带有一些环境杂音的原始人声", render: "🎙️ 原始录音导入 (背景有风扇杂音)" },
+      { name: "开启 AI 降噪与人声增强", hint: "消除背景杂音，让人声饱满", render: "✨ AI 处理完成：杂音消除，音质清脆" },
+      { name: "添加开场轻快 Jingle (片头)", hint: "让节目更有辨识度", render: "🔔 开场片头音乐混音完成" },
+      { name: "生成专属 RSS 分发链", hint: "同步到小宇宙、Apple Podcasts", render: "📻 RSS 已广播：全网均可收听！" }
+    ],
+    reality: "💡 现实映射：用手机自带录音机，丢给 Adobe Podcast AI 或剪映一键去噪，然后用免费的托管平台（如喜马拉雅、Podbean）就能完成全网分发。"
+  }
+};
+
+let currentToyKey = 'video';
+let currentStepIndex = 0;
+
+function switchToy(toyKey) {
+  currentToyKey = toyKey;
+  currentStepIndex = 0;
+  
+  // 更新导航激活状态
+  document.querySelectorAll('.tab-btn').forEach((btn, idx) => {
+    btn.classList.toggle('active', 
+      (toyKey === 'video' && idx === 0) ||
+      (toyKey === 'website' && idx === 1) ||
+      (toyKey === 'podcast' && idx === 2)
+    );
+  });
+
+  renderToy();
+}
+
+function renderToy() {
+  const toy = TOYS[currentToyKey];
+  
+  // 标题与说明
+  document.getElementById('toy-header').innerHTML = `
+    <h2 class="section-title">${toy.title}</h2>
+    <p class="section-desc">${toy.desc}</p>
+  `;
+
+  // 进度指示器
+  const dotsHtml = toy.steps.map((_, i) => 
+    `<div class="step-dot ${i < currentStepIndex ? 'done' : ''}"></div>`
+  ).join('');
+  document.getElementById('step-dots').innerHTML = dotsHtml;
+
+  // 预览舞台
+  const stage = document.getElementById('stage-preview');
+  if (currentStepIndex === 0) {
+    stage.innerHTML = `<span style="color: #64748b;">⏳ 工作台就绪，请在下方点击第 1 步开始...</span>`;
+  } else {
+    let itemsHtml = '';
+    for (let i = 0; i < currentStepIndex; i++) {
+      itemsHtml += `<div class="stage-item">${toy.steps[i].render}</div>`;
+    }
+    stage.innerHTML = itemsHtml;
+  }
+
+  // 按钮交互区
+  const panel = document.getElementById('action-panel');
+  panel.innerHTML = toy.steps.map((step, idx) => {
+    const isCurrent = idx === currentStepIndex;
+    const isPast = idx < currentStepIndex;
+    return `
+      <button class="action-btn" 
+        ${!isCurrent ? 'disabled' : ''} 
+        onclick="nextStep(${idx})"
+        style="${isPast ? 'opacity: 0.5; background: #1e293b;' : ''}">
+        <span>${idx + 1}. ${step.name}</span>
+        <span style="font-size: 12px; font-weight: normal; opacity: 0.8;">
+          ${isPast ? '✓ 已完成' : (isCurrent ? step.hint + ' →' : '等待上一步')}
+        </span>
+      </button>
+    `;
+  }).join('');
+}
+
+function nextStep(idx) {
+  if (idx !== currentStepIndex) return;
+  currentStepIndex++;
+  
+  renderToy();
+
+  // 如果达到最后一步，触发通关弹窗
+  if (currentStepIndex === TOYS[currentToyKey].steps.length) {
+    setTimeout(showModal, 400);
+  }
+}
+
+function showModal() {
+  const toy = TOYS[currentToyKey];
+  document.getElementById('modal-title').innerText = `🎉 掌握了：${toy.title}`;
+  document.getElementById('modal-desc').innerText = `你刚刚在不到 1 分钟内，把整个行业的核心业务链完整走了一遍。`;
+  document.getElementById('modal-tip').innerText = toy.reality;
+  document.getElementById('finish-modal').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('finish-modal').style.display = 'none';
+}
+
+// 初始渲染
+switchToy('video');
+</script>
+</body>
+</html>
